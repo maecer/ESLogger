@@ -245,9 +245,13 @@ public class ESLoggerFile: ESLogger {
             fclose(file)
         }
 
-        while let line = readLine() {
+        while let line = readLine(), active {
             self.processEvent(fromString: line)
         }
+    }
+    
+    override public func stop() {
+        active = false
     }
 }
 
