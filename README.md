@@ -61,5 +61,5 @@ let package = Package(
 
 ## License
 
-ESLogger is released under the [MIT License](https://github.com/nubcoxyz/ESLogger/blob/master/LICENSE) - Copyright (c) 2023 nubco
+ESLogger is released under the [MIT License](https://github.com/nubcoxyz/ESLogger/blob/master/LICENSE) - Copyright (c) 2023 nubco, llc
 

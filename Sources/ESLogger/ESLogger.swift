@@ -3,7 +3,7 @@
 //  ESLogger
 //
 //  Created by nub on 2/1/23.
-//  Copyright (c) 2023 nubco
+//  Copyright (c) 2023 nubco, llc
 //
 
 import Foundation
@@ -21,12 +21,14 @@ public class ESLogger {
         case needRootPermission
         case needTCCFullDiskAccess
         case tooManyConnections
+        case invalidArgument
+        case needEntitlement
 
         case invalidDataInFile
         case errorReadingFromFile(message: String)
 
         case jsonMissingKey(keyName: String)
-        case jsonInvalidValueType(valueName: String)
+        case jsonInvalidValue(valueName: String)
         case jsonDecodeError(message: String)
 
         case internalError(message: String)
@@ -37,7 +39,7 @@ public class ESLogger {
     fileprivate var process: Subprocess?
     fileprivate let callback: (ESMessage) -> Void
     fileprivate let errCallback: (Error) -> Void
-    private var lastGlobalSeqNum = 0
+    private var lastGlobalSeqNum = -1
     private var previousEventJSONDecodeError = ""
 
     public private(set) var requestedEventNames: [String] = []
@@ -102,9 +104,11 @@ public class ESLogger {
                                     theError = Error.needRootPermission
                                 } else if input.contains("ES_NEW_CLIENT_RESULT_ERR_TOO_MANY_CLIENTS") {
                                     theError = Error.tooManyConnections
+                                } else if input.contains("ES_NEW_CLIENT_RESULT_ERR_INVALID_ARGUMENT") {
+                                    theError = Error.invalidArgument
+                                } else if input.contains("ES_NEW_CLIENT_RESULT_ERR_NOT_ENTITLED") {
+                                    theError = Error.needEntitlement
                                 } else {
-                                    // shouldn't get these ES_NEW_CLIENT_RESULT_ERR_INVALID_ARGUMENT,
-                                    // ES_NEW_CLIENT_RESULT_ERR_NOT_ENTITLED, ES_NEW_CLIENT_RESULT_ERR_INTERNAL
                                     theError = Error.internalError(message: input)
                                 }
 
@@ -128,7 +132,7 @@ public class ESLogger {
 
     func processEvent(_ data: Data) {
         let input = String(decoding: data, as: UTF8.self)
-        self.processEvent(fromString: input)
+        processEvent(fromString: input)
     }
 
     func processEvent(fromString input: String) {
@@ -152,9 +156,9 @@ public class ESLogger {
                 previousEventJSONDecodeError = ""
             }
 
-            if self.printJSON {
+            if printJSON {
                 log.info("Event received", metadata: ["EventAsString": "\(event)"])
-                if self.onlyJSON {
+                if onlyJSON {
                     continue
                 }
             } else {
@@ -166,7 +170,7 @@ public class ESLogger {
                     let jsonEvent = try JSONDecoder().decode(ESMessage.self, from: eventData)
                     log.trace("Decoded JSON", metadata: ["event": "\(jsonEvent)"])
 
-                    if jsonEvent.global_seq_num > self.lastGlobalSeqNum+1 {
+                    if lastGlobalSeqNum != -1 && jsonEvent.global_seq_num > lastGlobalSeqNum+1 {
                         log.debug("""
                         kernel dropped events for us - event: \(jsonEvent.global_seq_num) \
                         last: \(self.lastGlobalSeqNum)
@@ -184,13 +188,19 @@ public class ESLogger {
             } catch Swift.DecodingError.typeMismatch(let expectedType, let context) {
                 log.debug("Dropping event, JSON invalid value type",
                           metadata: ["expectedType": "\(expectedType)", "context": "\(context)"])
-                errCallback(Error.jsonInvalidValueType(valueName: context.codingPath.last?.stringValue ?? ""))
+                errCallback(Error.jsonInvalidValue(valueName: context.codingPath.last?.stringValue ?? ""))
+                previousEventJSONDecodeError = ""
+                eventsDropped += 1
+            } catch Swift.DecodingError.valueNotFound(let expected, let context) {
+                log.debug("Dropping event, JSON invalid value",
+                          metadata: ["expectedType": "\(expected)", "context": "\(context)"])
+                errCallback(Error.jsonInvalidValue(valueName: context.codingPath.last?.stringValue ?? ""))
                 previousEventJSONDecodeError = ""
                 eventsDropped += 1
             } catch {
                 log.debug("JSON decode error", metadata: ["error": "\(error)"])
                 // error gets thrown when checking if next input processed starts with "{"
-                // this is a total hack and a reason why I think this library is fragile.
+                // this is how we handle events that get split across more than one line.
                 previousEventJSONDecodeError = event
             }
         }
@@ -198,7 +208,7 @@ public class ESLogger {
 }
 
 //
-//  Read from file on disk read once
+//  Read from file on disk
 //
 public class ESLoggerFile: ESLogger {
     private let fileURL: URL
@@ -249,14 +259,14 @@ public class ESLoggerFile: ESLogger {
             self.processEvent(fromString: line)
         }
     }
-    
+
     override public func stop() {
         active = false
     }
 }
 
 //
-//  Read from file one disk continuously
+//  Read from file on disk continuously
 //
 public class ESLoggerTail: ESLogger {
     static let tailLocation = "/usr/bin/tail"

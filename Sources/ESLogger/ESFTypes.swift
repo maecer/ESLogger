@@ -3,7 +3,7 @@
 //  ESLogger
 //
 //  Created by nub on 2/1/23.
-//  Copyright (c) 2023 nubco
+//  Copyright (c) 2023 nubco, llc
 //
 
 
@@ -15,7 +15,7 @@ public struct ESMessage: Codable, Sendable {
     public let version: Int
     public let time: String
     public let mach_time: Int
-    public let thread: ESThread
+    public let thread: ESThread?
     public let seq_num: Int
     public let global_seq_num: Int
     public let action_type: ActionType
@@ -126,7 +126,7 @@ public struct ESAuthenticationOd: Codable, Sendable {
     public let record_type: String
     public let record_name: String
     public let node_name: String
-    public let db_path: String
+    public let db_path: String?
 }
 
 public struct ESAuthenticationTouchId: Codable, Sendable {
@@ -139,7 +139,7 @@ public struct ESAuthenticationToken: Codable, Sendable {
     public let instigator: ESProcess
     public let pubkey_hash: String
     public let token_id: String
-    public let kerberos_principle: String
+    public let kerberos_principle: String?
 }
 
 public enum ESAutoUnlockType: Int, Codable, Sendable {
@@ -164,7 +164,7 @@ public struct ESBTMLaunchItem: Codable, Sendable {
     public let managed: Bool
     public let uid: Int
     public let item_url: String
-    public let app_url: String
+    public let app_url: String?
 }
 
 public struct ESFD: Codable, Sendable {
@@ -547,8 +547,9 @@ public struct ESEvent_create: Codable, Sendable {
     public let destination: create_destination_inner
     
     public struct create_destination_inner: Codable, Sendable {
+        // some of these should be non_null but without union easiest way to to make them nullable
         public let existing_file: ESFile?
-        // TODO: (testing) not sure how to evoke this event.  creating new file doesn't.
+        // TODO: (testing) not sure how to evoke this version of event.  creating new file doesn't.
         public let new_path: create_new_path_inner?
         
         public struct create_new_path_inner: Codable, Sendable {
@@ -556,6 +557,7 @@ public struct ESEvent_create: Codable, Sendable {
             public let filename: String
             public let mode: Int
         }
+        // TODO: should likely be acl of type acl_t here.
     }
 }
 
@@ -689,7 +691,6 @@ public struct ESEvent_fsgetpath: Codable, Sendable {
 }
 
 public struct ESEvent_settime: Codable, Sendable {
-    // TODO: (testing) Empty??
 }
 
 public struct ESEvent_dup: Codable, Sendable {
@@ -719,7 +720,7 @@ public struct ESEvent_setacl: Codable, Sendable {
     public let set_or_clear: ESSetOrClear
     public let acl: setacl_acl_inner
     
-    // TODO: (testing) this had exception when pulling sample events
+    // TODO: (testing) eslogger had exception when pulling sample events
     public struct setacl_acl_inner: Codable, Sendable {
         public let set: Int
     }
@@ -750,7 +751,6 @@ public struct ESEvent_proc_suspend_resume: Codable, Sendable {
 }
 
 public struct ESEvent_cs_invalidated: Codable, Sendable {
-    // TODO: (testing) empty?
 }
 
 public struct ESEvent_trace: Codable, Sendable {
@@ -815,7 +815,7 @@ public struct ESEvent_xp_malware_remediated: Codable, Sendable {
     public let action_type: String
     public let success: Bool
     public let result_description: String
-    public let remediated_path: String
+    public let remediated_path: String?
     public let remediated_process_audit_token: AuditToken?
 }
 
@@ -842,19 +842,19 @@ public struct ESEvent_lw_session_unlock: Codable, Sendable {
 public struct ESEvent_screensharing_attach: Codable, Sendable {
     public let success: Bool
     public let source_address_type: ESAddressType
-    public let source_address: String
-    public let viewer_appleid: String
+    public let source_address: String?
+    public let viewer_appleid: String?
     public let authentication_type: String
-    public let authentication_username: String
-    public let session_username: String
+    public let authentication_username: String?
+    public let session_username: String?
     public let existing_session: Bool
     public let graphical_session_id: Int
 }
 
 public struct ESEvent_screensharing_detach: Codable, Sendable {
     public let source_address_type: ESAddressType
-    public let source_address: String
-    public let viewer_appleid: String
+    public let source_address: String?
+    public let viewer_appleid: String?
     public let graphical_session_id: Int
 }
 
@@ -890,7 +890,7 @@ public struct ESEvent_btm_launch_item_add: Codable, Sendable {
     public let instigator: ESProcess?
     public let app: ESProcess?
     public let item: ESBTMLaunchItem
-    public let executable_path: String
+    public let executable_path: String?
 }
 
 public struct ESEvent_btm_launch_item_remove: Codable, Sendable {
