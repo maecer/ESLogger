@@ -313,6 +313,42 @@ public enum ESSocketDomain: Int, Codable, Sendable {
          AF_MAX
 }
 
+//netinet/in.h
+public enum ESIPProtocol: Int, Codable, Sendable {
+    case IPPROTO_IP=0,
+         IPPROTO_ICMP, IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_IPV4,
+         IPPROTO_TCP=6, IPPROTO_ST, IPPROTO_EGP, IPPROTO_PIGP,
+         IPPROTO_RCCMON, IPPROTO_NVPII, IPPROTO_PUP, IPPROTO_ARGUS,
+         IPPROTO_EMCON, IPPROTO_XNET, IPPROTO_CHAOS, IPPROTO_UDP,
+         IPPROTO_MUX, IPPROTO_MEAS, IPPROTO_HMP, IPPROTO_PRM,
+         IPPROTO_IDP, IPPROTO_TRUNK1, IPPROTO_TRUNK2, IPPROTO_LEAF1,
+         IPPROTO_LEAF2, IPPROTO_RDP, IPPROTO_IRTP, IPPROTO_TP,
+         IPPROTO_BLT, IPPROTO_NSP, IPPROTO_INP, IPPROTO_SEP,
+         IPPROTO_3PC, IPPROTO_IDPR, IPPROTO_XTP, IPPROTO_DDP,
+         IPPROTO_CMTP, IPPROTO_TPXX, IPPROTO_IL, IPPROTO_IPV6,
+         IPPROTO_SDRP, IPPROTO_ROUTING, IPPROTO_FRAGMENT, IPPROTO_IDRP,
+         IPPROTO_RSVP, IPPROTO_GRE, IPPROTO_MHRP, IPPROTO_BHA,
+         IPPROTO_ESP, IPPROTO_AH, IPPROTO_INLSP, IPPROTO_SWIPE,
+         IPPROTO_NHRP,
+         IPPROTO_ICMPV6=58, IPPROTO_NONE, IPPROTO_DSTOPTS, IPPROTO_AHIP,
+         IPPROTO_CFTP, IPPROTO_HELLO, IPPROTO_SATEXPAK, IPPROTO_KRYPTOLAN,
+         IPPROTO_RVD, IPPROTO_IPPC, IPPROTO_ADFS, IPPROTO_SATMON,
+         IPPROTO_VISA, IPPROTO_IPCV, IPPROTO_CPNX, IPPROTO_CPHB,
+         IPPROTO_WSN, IPPROTO_PVP, IPPROTO_BRSATMON, IPPROTO_ND,
+         IPPROTO_WBMON, IPPROTO_WBEXPAK, IPPROTO_EON, IPPROTO_VMTP,
+         IPPROTO_SVMTP, IPPROTO_VINES, IPPROTO_TTP, IPPROTO_IGP,
+         IPPROTO_DGP, IPPROTO_TCF, IPPROTO_IGRP, IPPROTO_OSPFIGP,
+         IPPROTO_SRPC, IPPROTO_LARP, IPPROTO_MTP, IPPROTO_AX25,
+         IPPROTO_IPEIP, IPPROTO_MICP, IPPROTO_SCCSP, IPPROTO_ETHERIP,
+         IPPROTO_ENCAP, IPPROTO_APES, IPPROTO_GMTP,
+         IPPROTO_PIM=103,
+         IPPROTO_IPCOMP=108,
+         IPPROTO_PGM=113,
+         IPPROTO_SCTP=132,
+         IPPROTO_DIVERT=254,
+         IPPROTO_RAW=255,
+         IPPROTO_MAX=256
+}
 
 // kern/cs_blobs.h
 public struct CodeSigningFlags: OptionSet, Codable, Hashable, CustomStringConvertible, Sendable {
@@ -707,7 +743,7 @@ public struct ESEvent_uipc_connect: Codable, Sendable {
     public let file: ESFile
     public let domain: ESSocketDomain
     public let type: ESSocketType
-    public let proto: Int
+    public let proto: ESIPProtocol
     
     // protocol is a reserved word in Swift
     public enum CodingKeys: String, CodingKey, Sendable {
@@ -899,6 +935,21 @@ public struct ESEvent_btm_launch_item_remove: Codable, Sendable {
     public let item: ESBTMLaunchItem
 }
 
+public struct ESEvent_networkflow: Codable, Sendable {
+    public let instigator: ESProcess
+    public let remote_hostname: String?
+    public let remote_address: String?
+    public let remote_port: String?
+    public let local_address: String?
+    public let local_port: String?
+    public let flow_protocol: ESIPProtocol
+    public let flow_family: ESSocketDomain
+    public let flow_type: ESSocketType
+    public let direction: String
+    public let url: String?
+    public let uuid: String
+}
+
 
 public enum ESEvent: Codable, Sendable {
     case exec(ESEvent_exec)
@@ -983,7 +1034,8 @@ public enum ESEvent: Codable, Sendable {
     case login_logout(ESEvent_login_logout)
     case btm_launch_item_add(ESEvent_btm_launch_item_add)
     case btm_launch_item_remove(ESEvent_btm_launch_item_remove)
-    
+    case networkflow(ESEvent_networkflow)
+
     //
     // I believe (limited swift skillz) this is the only way to combat having a named key of "_0"
     // By default Codable wants {"exec":{"_0": {ESEvent_exec_kvs}}} but the
@@ -1158,6 +1210,8 @@ public enum ESEvent: Codable, Sendable {
             self = .btm_launch_item_add(try container.decode(ESEvent_btm_launch_item_add.self, forKey: ESEvent.CodingKeys.btm_launch_item_add))
         case .btm_launch_item_remove:
             self = .btm_launch_item_remove(try container.decode(ESEvent_btm_launch_item_remove.self, forKey: ESEvent.CodingKeys.btm_launch_item_remove))
+        case .networkflow:
+            self = .networkflow(try container.decode(ESEvent_networkflow.self, forKey: ESEvent.CodingKeys.networkflow))
         }
     }
     
@@ -1329,6 +1383,8 @@ public enum ESEvent: Codable, Sendable {
             try container.encode(evt, forKey: ESEvent.CodingKeys.btm_launch_item_add)
         case .btm_launch_item_remove(let evt):
             try container.encode(evt, forKey: ESEvent.CodingKeys.btm_launch_item_remove)
+        case .networkflow(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.networkflow)
         }
     }
     
@@ -1343,7 +1399,8 @@ public enum ESEvent: Codable, Sendable {
               get_task_read, get_task_inspect, setuid, setgid, seteuid, setegid, setreuid, setregid,
               copyfile, authentication, xp_malware_detected, xp_malware_remediated, lw_session_login,
               lw_session_logout, lw_session_lock, lw_session_unlock, screensharing_attach, screensharing_detach,
-              openssh_login, openssh_logout, login_login, login_logout, btm_launch_item_add, btm_launch_item_remove
+              openssh_login, openssh_logout, login_login, login_logout, btm_launch_item_add, btm_launch_item_remove,
+              networkflow
     }
 }
 
@@ -1476,6 +1533,7 @@ public enum EventType: Int, Codable, CaseIterable, Sendable {
     , ES_EVENT_TYPE_NOTIFY_BTM_LAUNCH_ITEM_ADD
     , ES_EVENT_TYPE_NOTIFY_BTM_LAUNCH_ITEM_REMOVE
     , ES_EVENT_TYPE_LAST
+    , ES_EVENT_TYPE_NOTIFY_NETWORKFLOW=90210 // nubco added type to support Network Extension data
     
     public func shortName() -> String {
         return String(describing: self).lowercased().components(separatedBy: ["_",])[4...].joined(separator: "_")

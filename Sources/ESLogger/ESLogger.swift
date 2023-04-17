@@ -39,7 +39,7 @@ public class ESLogger {
     fileprivate var process: Subprocess?
     fileprivate let callback: (ESMessage) -> Void
     fileprivate let errCallback: (Error) -> Void
-    private var lastGlobalSeqNum = -1
+    public private(set) var lastGlobalSeqNum = -1
     private var previousEventJSONDecodeError = ""
 
     public private(set) var requestedEventNames: [String] = []
@@ -224,7 +224,8 @@ public class ESLoggerFile: ESLogger {
     }
 
     public static func validFileHeader(inFileURL: URL) -> Bool {
-        guard let expectedHeader = "{\"schema_version\":1,\"mach_time\":".data(using: .utf8) else { return false }
+        // guard let expectedHeader = "{\"schema_version\":1,\"mach_time\":".data(using: .utf8) else { return false }
+        guard let expectedHeader = "{".data(using: .utf8) else { return false }
         guard let fileHandle = FileHandle(forReadingAtPath: inFileURL.path) else { return false }
         defer {
             if #available(macOS 10.15, *) {
