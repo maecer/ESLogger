@@ -288,6 +288,93 @@ public enum ESOpenSSHLoginResultType: Int, Codable, Sendable {
          ES_OPENSSH_INVALID_USER
 }
 
+public enum ESAuthRuleClass: Int, Codable, Sendable {
+    case ES_AUTHORIZATION_RULE_CLASS_USER = 0,
+         ES_AUTHORIZATION_RULE_CLASS_RULE,
+         ES_AUTHORIZATION_RULE_CLASS_MECHANISM,
+         ES_AUTHORIZATION_RULE_CLASS_ALLOW,
+         ES_AUTHORIZATION_RULE_CLASS_DENY,
+         ES_AUTHORIZATION_RULE_CLASS_UNKNOWN,
+         ES_AUTHORIZATION_RULE_CLASS_INVALID
+}
+
+public enum ESProfileSource: Int, Codable, Sendable {
+    case ES_PROFILE_SOURCE_MANAGED = 0,
+         ES_PROFILE_SOURCE_INSTALL
+}
+
+public enum ESSudoPluginType: Int, Codable, Sendable {
+	case ES_SUDO_PLUGIN_TYPE_UNKNOWN = 0,
+	     ES_SUDO_PLUGIN_TYPE_FRONT_END,
+	     ES_SUDO_PLUGIN_TYPE_POLICY,
+	     ES_SUDO_PLUGIN_TYPE_IO,
+	     ES_SUDO_PLUGIN_TYPE_AUDIT,
+	     ES_SUDO_PLUGIN_TYPE_APPROVAL
+}
+
+public enum ESODMemberType: Int, Codable, Sendable {
+    case ES_OD_MEMBER_TYPE_USER_NAME = 0,
+         ES_OD_MEMBER_TYPE_USER_UUID,
+         ES_OD_MEMBER_TYPE_GROUP_UUID
+}
+
+public enum ESODAccountType: Int, Codable, Sendable {
+    case ES_OD_ACCOUNT_TYPE_USER = 0,
+         ES_OD_ACCOUNT_TYPE_COMPUTER
+}
+
+public enum ESODRecordType: Int, Codable, Sendable {
+    case ES_OD_RECORD_TYPE_USER = 0,
+         ES_OD_RECORD_TYPE_GROUP
+}
+
+public enum ESXPCDomainType: Int, Codable, Sendable {
+	case ES_XPC_DOMAIN_TYPE_SYSTEM = 1,
+	     ES_XPC_DOMAIN_TYPE_USER,
+	     ES_XPC_DOMAIN_TYPE_USER_LOGIN,
+	     ES_XPC_DOMAIN_TYPE_SESSION,
+	     ES_XPC_DOMAIN_TYPE_PID,
+	     ES_XPC_DOMAIN_TYPE_MANAGER,
+	     ES_XPC_DOMAIN_TYPE_PORT,
+	     ES_XPC_DOMAIN_TYPE_GUI
+
+    public func shortName() -> String {
+        return String(describing: self).lowercased().components(separatedBy: ["_",])[4...].joined(separator: "_")
+    }
+}
+
+public struct ESAuthResult: Codable, Sendable {
+    public let right_name: String
+    public let rule_class: ESAuthRuleClass
+    public let granted: Bool
+}
+
+public struct ESProfile: Codable, Sendable {
+    public let identifier: String
+    public let uuid: String
+    public let install_source: ESProfileSource
+    public let organization: String
+    public let display_name: String
+    public let scope: String
+}
+
+public struct ESSudoRejectInfo: Codable, Sendable {
+    public let plugin_name: String
+    public let plugin_type: ESSudoPluginType
+    public let failure_message: String
+}
+
+public struct ESODMemberID: Codable, Sendable {
+    public let member_type: ESODMemberType
+    public let member_value: String
+}
+
+public struct ESODMemberIDArray: Codable, Sendable {
+    public let member_type: ESODMemberType
+    public let member_array: [String]
+}
+
+
 // sys/socket.h
 public enum ESSocketType: Int, Codable, Sendable {
     case SOCK_STREAM=1,
@@ -935,6 +1022,183 @@ public struct ESEvent_btm_launch_item_remove: Codable, Sendable {
     public let item: ESBTMLaunchItem
 }
 
+public struct ESEvent_authorization_judgement: Codable, Sendable {
+    public let instigator: ESProcess
+    public let petitioner: ESProcess?
+    public let return_code: Int
+    public let result_count: Int
+    public let results: [ESAuthResult]?
+}
+
+public struct ESEvent_authorization_petition: Codable, Sendable {
+    public let instigator: ESProcess
+    public let petitioner: ESProcess?
+    public let flags: Int
+    // public let right_count: Int
+    public let rights: [String]?
+}
+
+public struct ESEvent_profile_remove: Codable, Sendable {
+    public let instigator: ESProcess
+    public let profile: ESProfile
+}
+
+public struct ESEvent_profile_add: Codable, Sendable {
+    public let instigator: ESProcess
+    public let is_update: Bool
+    public let profile: ESProfile
+}
+
+public struct ESEvent_sudo: Codable, Sendable {
+    public let success: Bool
+    public let reject_info: ESSudoRejectInfo?
+    // public let has_from_uid: Bool
+    public let from_uid: Int?
+    public let from_username: String?
+    // public let has_to_uid: Bool
+    public let to_uid: Int?
+    public let to_username: String?
+    public let command: String?
+}
+
+public struct ESEvent_su: Codable, Sendable {
+    public let success: Bool
+    public let failure_message: String?
+    public let from_uid: Int
+    public let from_username: String
+    // public let has_to_uid: Bool
+    public let to_uid: Int?
+    public let to_username: String?
+    public let shell: String?
+    public let argc: Int
+    public let argv: [String]?
+    public let env_count: Int
+    public let env: [String]?
+}
+
+public struct ESEvent_od_group_add: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let group_name: String
+    public let member: ESODMemberID
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_group_remove: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let group_name: String
+    public let member: ESODMemberID
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_group_set: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let group_name: String
+    public let members: ESODMemberIDArray
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_modify_password: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let account_type: ESODAccountType
+    public let account_name: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_disable_user: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let user_name: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_enable_user: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let user_name: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_attribute_value_add: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let record_type: ESODRecordType
+    public let record_name: String
+    public let attribute_name: String
+    public let attribute_value: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_attribute_value_remove: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let record_type: ESODRecordType
+    public let record_name: String
+    public let attribute_name: String
+    public let attribute_value: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_attribute_set: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let record_type: ESODRecordType
+    public let record_name: String
+    public let attribute_name: String
+    // public let attribute_value_count: Int
+    public let attribute_values: [String]?
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_create_user: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let user_name: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_create_group: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let group_name: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_delete_user: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let user_name: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_od_delete_group: Codable, Sendable {
+    public let instigator: ESProcess
+    public let error_code: Int
+    public let group_name: String
+    public let node_name: String
+    public let db_path: String?
+}
+
+public struct ESEvent_xpc_connect: Codable, Sendable {
+    public let service_name: String
+    public let service_domain_type: ESXPCDomainType
+}
+
 public struct ESEvent_networkflow: Codable, Sendable {
     public let instigator: ESProcess
     public let remote_hostname: String?
@@ -949,7 +1213,6 @@ public struct ESEvent_networkflow: Codable, Sendable {
     public let url: String?
     public let uuid: String
 }
-
 
 public enum ESEvent: Codable, Sendable {
     case exec(ESEvent_exec)
@@ -1034,6 +1297,26 @@ public enum ESEvent: Codable, Sendable {
     case login_logout(ESEvent_login_logout)
     case btm_launch_item_add(ESEvent_btm_launch_item_add)
     case btm_launch_item_remove(ESEvent_btm_launch_item_remove)
+    case authorization_judgement(ESEvent_authorization_judgement)
+    case authorization_petition(ESEvent_authorization_petition)
+    case od_attribute_set(ESEvent_od_attribute_set)
+    case od_attribute_value_add(ESEvent_od_attribute_value_add)
+    case od_attribute_value_remove(ESEvent_od_attribute_value_remove)
+    case od_create_group(ESEvent_od_create_group)
+    case od_create_user(ESEvent_od_create_user)
+    case od_delete_group(ESEvent_od_delete_group)
+    case od_delete_user(ESEvent_od_delete_user)
+    case od_disable_user(ESEvent_od_disable_user)
+    case od_enable_user(ESEvent_od_enable_user)
+    case od_group_add(ESEvent_od_group_add)
+    case od_group_remove(ESEvent_od_group_remove)
+    case od_group_set(ESEvent_od_group_set)
+    case od_modify_password(ESEvent_od_modify_password)
+    case profile_add(ESEvent_profile_add)
+    case profile_remove(ESEvent_profile_remove)
+    case su(ESEvent_su)
+    case sudo(ESEvent_sudo)
+    case xpc_connect(ESEvent_xpc_connect)
     case networkflow(ESEvent_networkflow)
 
     //
@@ -1210,6 +1493,46 @@ public enum ESEvent: Codable, Sendable {
             self = .btm_launch_item_add(try container.decode(ESEvent_btm_launch_item_add.self, forKey: ESEvent.CodingKeys.btm_launch_item_add))
         case .btm_launch_item_remove:
             self = .btm_launch_item_remove(try container.decode(ESEvent_btm_launch_item_remove.self, forKey: ESEvent.CodingKeys.btm_launch_item_remove))
+        case .authorization_judgement:
+            self = .authorization_judgement(try container.decode(ESEvent_authorization_judgement.self, forKey: ESEvent.CodingKeys.authorization_judgement))
+        case .authorization_petition:
+            self = .authorization_petition(try container.decode(ESEvent_authorization_petition.self, forKey: ESEvent.CodingKeys.authorization_petition))
+        case .od_attribute_set:
+            self = .od_attribute_set(try container.decode(ESEvent_od_attribute_set.self, forKey: ESEvent.CodingKeys.od_attribute_set))
+        case .od_attribute_value_add:
+            self = .od_attribute_value_add(try container.decode(ESEvent_od_attribute_value_add.self, forKey: ESEvent.CodingKeys.od_attribute_value_add))
+        case .od_attribute_value_remove:
+            self = .od_attribute_value_remove(try container.decode(ESEvent_od_attribute_value_remove.self, forKey: ESEvent.CodingKeys.od_attribute_value_remove))
+        case .od_create_group:
+            self = .od_create_group(try container.decode(ESEvent_od_create_group.self, forKey: ESEvent.CodingKeys.od_create_group))
+        case .od_create_user:
+            self = .od_create_user(try container.decode(ESEvent_od_create_user.self, forKey: ESEvent.CodingKeys.od_create_user))
+        case .od_delete_group:
+            self = .od_delete_group(try container.decode(ESEvent_od_delete_group.self, forKey: ESEvent.CodingKeys.od_delete_group))
+        case .od_delete_user:
+            self = .od_delete_user(try container.decode(ESEvent_od_delete_user.self, forKey: ESEvent.CodingKeys.od_delete_user))
+        case .od_disable_user:
+            self = .od_disable_user(try container.decode(ESEvent_od_disable_user.self, forKey: ESEvent.CodingKeys.od_disable_user))
+        case .od_enable_user:
+            self = .od_enable_user(try container.decode(ESEvent_od_enable_user.self, forKey: ESEvent.CodingKeys.od_enable_user))
+        case .od_group_add:
+            self = .od_group_add(try container.decode(ESEvent_od_group_add.self, forKey: ESEvent.CodingKeys.od_group_add))
+        case .od_group_remove:
+            self = .od_group_remove(try container.decode(ESEvent_od_group_remove.self, forKey: ESEvent.CodingKeys.od_group_remove))
+        case .od_group_set:
+            self = .od_group_set(try container.decode(ESEvent_od_group_set.self, forKey: ESEvent.CodingKeys.od_group_set))
+        case .od_modify_password:
+            self = .od_modify_password(try container.decode(ESEvent_od_modify_password.self, forKey: ESEvent.CodingKeys.od_modify_password))
+        case .profile_add:
+            self = .profile_add(try container.decode(ESEvent_profile_add.self, forKey: ESEvent.CodingKeys.profile_add))
+        case .profile_remove:
+            self = .profile_remove(try container.decode(ESEvent_profile_remove.self, forKey: ESEvent.CodingKeys.profile_remove))
+        case .su:
+            self = .su(try container.decode(ESEvent_su.self, forKey: ESEvent.CodingKeys.su))
+        case .sudo:
+            self = .sudo(try container.decode(ESEvent_sudo.self, forKey: ESEvent.CodingKeys.sudo))
+        case .xpc_connect:
+            self = .xpc_connect(try container.decode(ESEvent_xpc_connect.self, forKey: ESEvent.CodingKeys.xpc_connect))
         case .networkflow:
             self = .networkflow(try container.decode(ESEvent_networkflow.self, forKey: ESEvent.CodingKeys.networkflow))
         }
@@ -1383,6 +1706,46 @@ public enum ESEvent: Codable, Sendable {
             try container.encode(evt, forKey: ESEvent.CodingKeys.btm_launch_item_add)
         case .btm_launch_item_remove(let evt):
             try container.encode(evt, forKey: ESEvent.CodingKeys.btm_launch_item_remove)
+        case .authorization_judgement(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.authorization_judgement)
+        case .authorization_petition(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.authorization_petition)
+        case .od_attribute_set(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_attribute_set)
+        case .od_attribute_value_add(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_attribute_value_add)
+        case .od_attribute_value_remove(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_attribute_value_remove)
+        case .od_create_group(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_create_group)
+        case .od_create_user(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_create_user)
+        case .od_delete_group(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_delete_group)
+        case .od_delete_user(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_delete_user)
+        case .od_disable_user(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_disable_user)
+        case .od_enable_user(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_enable_user)
+        case .od_group_add(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_group_add)
+        case .od_group_remove(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_group_remove)
+        case .od_group_set(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_group_set)
+        case .od_modify_password(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.od_modify_password)
+        case .profile_add(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.profile_add)
+        case .profile_remove(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.profile_remove)
+        case .su(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.su)
+        case .sudo(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.sudo)
+        case .xpc_connect(let evt):
+            try container.encode(evt, forKey: ESEvent.CodingKeys.xpc_connect)
         case .networkflow(let evt):
             try container.encode(evt, forKey: ESEvent.CodingKeys.networkflow)
         }
@@ -1399,8 +1762,11 @@ public enum ESEvent: Codable, Sendable {
               get_task_read, get_task_inspect, setuid, setgid, seteuid, setegid, setreuid, setregid,
               copyfile, authentication, xp_malware_detected, xp_malware_remediated, lw_session_login,
               lw_session_logout, lw_session_lock, lw_session_unlock, screensharing_attach, screensharing_detach,
-              openssh_login, openssh_logout, login_login, login_logout, btm_launch_item_add, btm_launch_item_remove,
-              networkflow
+              openssh_login, openssh_logout, login_login, login_logout, btm_launch_item_add, btm_launch_item_remove, 
+              authorization_judgement, authorization_petition, od_attribute_set, od_attribute_value_add, 
+              od_attribute_value_remove, od_create_group, od_create_user, od_delete_group, od_delete_user, 
+              od_disable_user, od_enable_user, od_group_add, od_group_remove, od_group_set, od_modify_password, 
+              profile_add, profile_remove, su, sudo, xpc_connect, networkflow
     }
 }
 
@@ -1532,6 +1898,26 @@ public enum EventType: Int, Codable, CaseIterable, Sendable {
     , ES_EVENT_TYPE_NOTIFY_LOGIN_LOGOUT
     , ES_EVENT_TYPE_NOTIFY_BTM_LAUNCH_ITEM_ADD
     , ES_EVENT_TYPE_NOTIFY_BTM_LAUNCH_ITEM_REMOVE
+    , ES_EVENT_TYPE_NOTIFY_PROFILE_ADD
+    , ES_EVENT_TYPE_NOTIFY_PROFILE_REMOVE
+    , ES_EVENT_TYPE_NOTIFY_SU
+    , ES_EVENT_TYPE_NOTIFY_AUTHORIZATION_PETITION
+    , ES_EVENT_TYPE_NOTIFY_AUTHORIZATION_JUDGEMENT
+    , ES_EVENT_TYPE_NOTIFY_SUDO
+    , ES_EVENT_TYPE_NOTIFY_OD_GROUP_ADD
+    , ES_EVENT_TYPE_NOTIFY_OD_GROUP_REMOVE
+    , ES_EVENT_TYPE_NOTIFY_OD_GROUP_SET
+    , ES_EVENT_TYPE_NOTIFY_OD_MODIFY_PASSWORD
+    , ES_EVENT_TYPE_NOTIFY_OD_DISABLE_USER
+    , ES_EVENT_TYPE_NOTIFY_OD_ENABLE_USER
+    , ES_EVENT_TYPE_NOTIFY_OD_ATTRIBUTE_VALUE_ADD
+    , ES_EVENT_TYPE_NOTIFY_OD_ATTRIBUTE_VALUE_REMOVE
+    , ES_EVENT_TYPE_NOTIFY_OD_ATTRIBUTE_SET
+    , ES_EVENT_TYPE_NOTIFY_OD_CREATE_USER
+    , ES_EVENT_TYPE_NOTIFY_OD_CREATE_GROUP
+    , ES_EVENT_TYPE_NOTIFY_OD_DELETE_USER
+    , ES_EVENT_TYPE_NOTIFY_OD_DELETE_GROUP
+    , ES_EVENT_TYPE_NOTIFY_XPC_CONNECT
     , ES_EVENT_TYPE_LAST
     , ES_EVENT_TYPE_NOTIFY_NETWORKFLOW=90210 // nubco added type to support Network Extension data
     

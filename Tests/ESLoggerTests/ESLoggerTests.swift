@@ -37,7 +37,7 @@ final class ESLoggerTests: XCTestCase {
         doClear()
         runESLogger(withFileURL: URL(fileURLWithPath: "Tests/JSON/esloggerEvents.unique.json"))
 
-        XCTAssertEqual(storedEvents.count, 77, "Expecting to load exactly 77 events from test file")
+        XCTAssertEqual(storedEvents.count, 93, "Expecting to load exactly 93 events from test file")
         var last = 0
         for event in storedEvents {
             if last+1 != event.global_seq_num {
